@@ -40,9 +40,6 @@ ALLOWED_USER_ID: your Telegram user ID
 
 ALLOWED_SERVICES: list of container names you want to manage
 
-Example in the code:
-
-python
 API_TOKEN = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ALLOWED_USER_ID = XXXXXXXXXXX
 ALLOWED_SERVICES = ["prometheus", "alertmanager", "grafana", "node_exporter"]
@@ -51,12 +48,10 @@ Save the script as bot.py.
 
 Install dependencies:
 
-bash
 pip install aiogram psutil
 Run the bot:
 
-bash
-python bot.py
+prometeus_bot.py
 Usage
 Start the bot in Telegram with /start.
 
