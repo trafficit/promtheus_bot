@@ -8,8 +8,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import psutil  # pip install psutil
 
 # ======== Config ========
-API_TOKEN = "XXXXXXXXXXXXXXXXXXXXXXXXX"
-ALLOWED_USER_ID = XXXXXXXXXXX
+API_TOKEN = os.getenv("API_TOKEN")
+ALLOWED_USER_ID = int(os.getenv("ALLOWED_USER_ID"))
 ALLOWED_SERVICES = ["prometheus", "alertmanager", "grafana", "node_exporter"]
 
 bot = Bot(token=API_TOKEN)
@@ -211,4 +211,54 @@ async def svc_select(cb: types.CallbackQuery):
     await cb.answer()
 
 # ----- Containers: actions -----
-@dp.callback_query_handler(lambda c: c.data.startswith(("svc_start:",
+@dp.callback_query_handler(lambda c: c.data.startswith("svc_start:"))
+async def svc_start(cb: types.CallbackQuery):
+    if not check_access(cb.from_user.id):
+        return await cb.message.answer("Доступ запрещён")
+    svc = cb.data.split(":", 1)[1]
+    if not is_allowed_service(svc):
+        return await cb.answer("Сервис не разрешён", show_alert=True)
+    r = run_docker(["docker", "start", svc])
+    msg = f"{svc}: {r.stdout.strip() or r.stderr.strip()}"
+    await cb.message.edit_text(msg, reply_markup=service_actions_menu(svc))
+    await cb.answer()
+
+@dp.callback_query_handler(lambda c: c.data.startswith("svc_stop:"))
+async def svc_stop(cb: types.CallbackQuery):
+    if not check_access(cb.from_user.id):
+        return await cb.message.answer("Доступ запрещён")
+    svc = cb.data.split(":", 1)[1]
+    if not is_allowed_service(svc):
+        return await cb.answer("Сервис не разрешён", show_alert=True)
+    r = run_docker(["docker", "stop", svc])
+    msg = f"{svc}: {r.stdout.strip() or r.stderr.strip()}"
+    await cb.message.edit_text(msg, reply_markup=service_actions_menu(svc))
+    await cb.answer()
+
+@dp.callback_query_handler(lambda c: c.data.startswith("svc_restart:"))
+async def svc_restart(cb: types.CallbackQuery):
+    if not check_access(cb.from_user.id):
+        return await cb.message.answer("Доступ запрещён")
+    svc = cb.data.split(":", 1)[1]
+    if not is_allowed_service(svc):
+        return await cb.answer("Сервис не разрешён", show_alert=True)
+    r = run_docker(["docker", "restart", svc])
+    msg = f"{svc}: {r.stdout.strip() or r.stderr.strip()}"
+    await cb.message.edit_text(msg, reply_markup=service_actions_menu(svc))
+    await cb.answer()
+
+@dp.callback_query_handler(lambda c: c.data.startswith("svc_logs:"))
+async def svc_logs(cb: types.CallbackQuery):
+    if not check_access(cb.from_user.id):
+        return await cb.message.answer("Доступ запрещён")
+    svc = cb.data.split(":", 1)[1]
+    if not is_allowed_service(svc):
+        return await cb.answer("Сервис не разрешён", show_alert=True)
+    r = run_docker(["docker", "logs", "--tail", "20", svc])
+    msg = f"{svc} логи:\n{r.stdout.strip() or r.stderr.strip()}"
+    await cb.message.edit_text(msg, reply_markup=service_actions_menu(svc))
+    await cb.answer()
+
+if __name__ == "__main__":
+    from aiogram import executor
+    executor.start_polling(dp, skip_updates=True)
